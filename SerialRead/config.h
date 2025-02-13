@@ -2,7 +2,10 @@
   config.h - config the keywords for Victron.DIRECT
 */
 
-#define MPPT_75_10
+// Use Victron Energy MPPT 100 20x
+#define MPPT_100_20
+//#define MPPT_75_10
+
 // MPPT 75 | 10
 #ifdef MPPT_75_10
 
