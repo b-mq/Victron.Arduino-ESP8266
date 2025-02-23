@@ -140,9 +140,9 @@
 	#define I 4
 	#define VPV 5
 	#define PPV 6
-	#define MPPT 7
-	#define OR 8
-	#define CS 9
+	#define CS 7
+	#define MPPT 8
+	#define OR 9
 	#define ERR 10
 	#define LOAD 11
 	#define IL 12
