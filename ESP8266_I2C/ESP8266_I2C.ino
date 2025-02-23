@@ -20,8 +20,15 @@ const int txPin = D8;  // TX Not used
 
 // Liquid Crystal LCD via I2C
 // set the LCD number of columns and rows
-const int lcdColumns = 16;
-const int lcdRows = 2;
+const int lcdColumns = 16;            // number of columns/characters per line in lcd
+const int lcdRows = 2;                // number of rows of lcd
+const int maxChars = 17;              // 16 chars for LCD + 1 null terminator '\0'
+const int screens = 4;                // 4 different lcd screens
+const int timeBetweenScreens = 4000;  // time in ms between switch of screens
+
+// buffer for LCD print for 1st and 2nd row
+char lcd_row_1[maxChars];  // buffer for 1st row of lcd to format output
+char lcd_row_2[maxChars];  // buffer for 2nd row of lcd to format output
 
 // set LCD address, number of columns and rows
 // if you don't know your display address, run an I2C scanner sketch
@@ -55,6 +62,7 @@ void setup() {
   victronSerial.begin(19200);
   // Liquid Crystal - initialize LCD
   lcd.init();
+  lcd.backlight();
   lcd.clear();
 }
 
@@ -69,6 +77,7 @@ void loop() {
   // so make use of the same principle used in PrintEverySecond()
   // or use some sort of Alarm/Timer Library
   PrintEverySecond();
+  PrintOnLcd();
 }
 
 // Serial Handling
@@ -188,4 +197,152 @@ void PrintValues() {
     Serial.print(",");
     Serial.println(value[i]);
   }
+}
+
+float GetFloatValue(int index, float mult = 1.0) {
+  float val = atof(value[index]) * mult;
+  return val;
+}
+
+int GetIntValue(int index, int mult = 1) {
+  int val = atoi(value[index]) * mult;
+  return val;
+}
+
+const char *GetStateOfOperation(int index) {
+  int val = atoi(value[index]);
+  switch (val) {
+    case 0:
+      return "Off";  // "Off"
+    case 1:
+      return "LoPWR";  // "Low power"
+    case 2:
+      return "Fault";  // "Fault"
+    case 3:
+      return "Bulk";  // "Bulk"
+    case 4:
+      return "Absor";  // "Absorption"
+    case 5:
+      return "Float";  // "Float"
+    case 6:
+      return "Storg";  // "Storage"
+    case 7:
+      return "Equal";  // "Equalize (manual)"
+    case 9:
+      return "Invrt";  // "Inverting"
+    case 11:
+      return "PwSup";  // "Power supply"
+    case 245:
+      return "Start";  // "Starting-up"
+    case 246:
+      return "ReAbs";  // "Repeated absorption"
+    case 247:
+      return "EqRec";  // "Auto equalize / Recondition"
+    case 248:
+      return "BtSaf";  // "BatterySafe"
+    default:
+      return "UNKNOWN";  // Unknown
+  }
+}
+
+void PrintOnLcd() {
+  static unsigned long prev_millis;
+  static int screenCounter;
+
+  // Print 4 different 'screens' on LCD
+  // switching screens after given amount
+
+  // * * * SCREEN 1 * * *
+  // VBAT 12.8V STATE
+  // IVAT 16.5A FLOAT
+
+  // -- 4 sec PAUSE --
+
+  // * * * SCREEN 2 * * *
+  // VPV 29V. IPV 17A
+  // PPV  72W
+
+  // -- 4 sec PAUSE --
+
+  // * * * SCREEN 3 * * *
+  // PTODAY 100W
+  // PMAX   80W
+
+  // -- 4 sec PAUSE --
+
+  // * * * SCREEN 4 * * *
+  // TOTAL POWER
+  //    10000.00KWh
+
+  if (millis() - prev_millis > timeBetweenScreens) {
+    screenCounter = (screenCounter + 1) % screens;
+    prev_millis = millis();
+
+    switch (screenCounter) {
+      case 0:
+        Configure_Screen_1();
+        break;
+      case 1:
+        Configure_Screen_2();
+        break;
+      case 2:
+        Configure_Screen_3();
+        break;
+      case 3:
+        Configure_Screen_4();
+        break;
+      default:
+        Configure_Screen_1();
+    }
+
+    // write to lcd
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(lcd_row_1);
+    lcd.setCursor(0, 1);
+    lcd.print(lcd_row_2);
+  }
+}
+
+// -- Voltage, Ampere & State --
+void Configure_Screen_1() {
+  // get values & convert
+  const float volt = GetFloatValue(V, 0.001);    // mV to V
+  const float ampere = GetFloatValue(I, 0.001);  // mA to A
+  const char *state = GetStateOfOperation(CS);
+
+  // format output string for lcd
+  snprintf(lcd_row_1, maxChars, "VBAT %4.1fV STATE", volt);
+  snprintf(lcd_row_2, maxChars, "IBAT %4.1fA %s", ampere, state);
+}
+
+// -- VPV, IPV & PPV --
+void Configure_Screen_2() {
+  // get values & convert
+  float _VPV = GetFloatValue(VPV, 0.001);  // mV to V
+  float _PPV = GetFloatValue(PPV);         // W
+  float _IPV = _PPV / 12.5 /* V */;
+
+  // format output string for lcd
+  snprintf(lcd_row_1, maxChars, "VPV %3.0fV IPV %2.0fA", _VPV, _IPV);
+  snprintf(lcd_row_2, maxChars, "PPV %3.0fW ", _PPV);
+}
+
+// -- PTODAY & PMAX --
+void Configure_Screen_3() {
+  int _PTODAY = GetIntValue(H20, 10);  // in 0,01kWh -> W
+  int _PMAX = GetIntValue(H21);        // W
+
+  // format output string for lcd
+  snprintf(lcd_row_1, maxChars, "PTODAY %3dW", _PTODAY);
+  snprintf(lcd_row_2, maxChars, "PMAX   %3dW ", _PMAX);
+}
+
+// -- TOTAL POWER --
+void Configure_Screen_4() {
+  int _TOTAL_POWER = GetIntValue(H20, 10);  // in 0,01kWh -> W
+
+  // format output string for lcd
+  snprintf(lcd_row_1, maxChars, "TOTAL POWER");
+  snprintf(lcd_row_2, maxChars, "%13dKWh ", _TOTAL_POWER);
 }
