@@ -14,25 +14,44 @@
 #include <SoftwareSerial.h>
 #include <LiquidCrystal_I2C.h>
 
-// Serial variables
-const int rxPin = D7;
-const int txPin = D8;  // TX Not used
+// -- RX & TX Pins --
+const int rxPin = D7;  // RX D7 == GPIO 13
+const int txPin = D8;  // TX D8 == GPIO 15 Not used
 
-// Liquid Crystal LCD via I2C
+// -- Liquid Crystal LCD via I2C --
 // set the LCD number of columns and rows
-const int lcdColumns = 16;            // number of columns/characters per line in lcd
-const int lcdRows = 2;                // number of rows of lcd
-const int maxChars = 17;              // 16 chars for LCD + 1 null terminator '\0'
-const int screens = 4;                // 4 different lcd screens
-const int timeBetweenScreens = 4000;  // time in ms between switch of screens
+const int lcdColumns = 16;                            // number of columns/characters per line in lcd
+const int lcdRows = 2;                                // number of rows of lcd
+const int maxChars = 17;                              // 16 chars for LCD + 1 null terminator '\0'
+const int screens = 4;                                // 4 different lcd screens
+const int timeBetweenScreens = 4000;                  // time in ms between switch of screens
+const int lcdTimeout = timeBetweenScreens * screens;  // time until background will be switched off in ms
+const int modeSwitchTimeout = 1750;                   // timeout for display mode after switch
+int modeSwitchStartTime = 0;                          // time when mode switched
+bool showModeSwitch = false;                          // show mode Switch until timeout
+int screenCounter = 0;                                // the current screen to print on LCD
+bool isLcdOn = false;                                 // BG light state of LCD
 
 // buffer for LCD print for 1st and 2nd row
 char lcd_row_1[maxChars];  // buffer for 1st row of lcd to format output
 char lcd_row_2[maxChars];  // buffer for 2nd row of lcd to format output
 
+// -- MODE --
+bool isManualMode = false;  // If switch of screens is manual via button press
+
+// -- Button --
+const int buttonPin = D4;          // GPIO 2
+const int debounceTime = 50;       // 50ms debounce time
+const int longPressTime = 2000;    // Time until 'long press' will be detected
+int buttonState = LOW;             // The current reading from the input pin
+bool isButtonPressed = false;      // Whether button is pressed or not
+bool isButtonLongPressed = false;  // Whether button is long pressed;
+
 // set LCD address, number of columns and rows
 // if you don't know your display address, run an I2C scanner sketch
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+
+// -- Victron Energy MPPT --
 SoftwareSerial victronSerial(rxPin, txPin);          // RX, TX Using Software Serial so we can use the hardware serial to check the ouput
                                                      // via the USB serial provided by the NodeMCU.
 char receivedChars[buffsize];                        // an array to store the received data
@@ -62,8 +81,11 @@ void setup() {
   victronSerial.begin(19200);
   // Liquid Crystal - initialize LCD
   lcd.init();
-  lcd.backlight();
+  SetLcdBg(true);
   lcd.clear();
+  // Button
+  // Configure the ESP8266 pin as a pull-up input: HIGH when the button is open, LOW when pressed.
+  pinMode(buttonPin, INPUT_PULLUP);
 }
 
 void loop() {
@@ -77,7 +99,13 @@ void loop() {
   // so make use of the same principle used in PrintEverySecond()
   // or use some sort of Alarm/Timer Library
   PrintEverySecond();
-  PrintOnLcd();
+
+  // BUTTON
+  HandleButton();
+
+  // LCD
+  PrintScreens();
+  CheckLcdTimeout();
 }
 
 // Serial Handling
@@ -209,8 +237,8 @@ int GetIntValue(int index, int mult = 1) {
   return val;
 }
 
-const char *GetStateOfOperation(int index) {
-  int val = atoi(value[index]);
+const char *GetStateOfOperation() {
+  int val = GetIntValue(CS);
   switch (val) {
     case 0:
       return "Off";  // "Off"
@@ -245,71 +273,164 @@ const char *GetStateOfOperation(int index) {
   }
 }
 
-void PrintOnLcd() {
-  static unsigned long prev_millis;
-  static int screenCounter;
+bool HandleButton() {
+  static unsigned long bounceTime;
+  static unsigned long longPressPrevTime;
+  static int boundState;
+  static int lastButtonState;
 
-  // Print 4 different 'screens' on LCD
-  // switching screens after given amount
+  // get button state (with noise)
+  buttonState = digitalRead(buttonPin);
 
-  // * * * SCREEN 1 * * *
-  // VBAT 12.8V STATE
-  // IVAT 16.5A FLOAT
+  // check button pressed/released state with noise filtering via
+  // monitoring consistant button state over given period
+  if (buttonState != boundState) {
+    bounceTime = millis();
+    longPressPrevTime = millis();
+    boundState = buttonState;
+  }
 
-  // -- 4 sec PAUSE --
-
-  // * * * SCREEN 2 * * *
-  // VPV 29V. IPV 17A
-  // PPV  72W
-
-  // -- 4 sec PAUSE --
-
-  // * * * SCREEN 3 * * *
-  // PTODAY 100W
-  // PMAX   80W
-
-  // -- 4 sec PAUSE --
-
-  // * * * SCREEN 4 * * *
-  // TOTAL POWER
-  //    10000.00KWh
-
-  if (millis() - prev_millis > timeBetweenScreens) {
-    screenCounter = (screenCounter + 1) % screens;
-    prev_millis = millis();
-
-    switch (screenCounter) {
-      case 0:
-        Configure_Screen_1();
-        break;
-      case 1:
-        Configure_Screen_2();
-        break;
-      case 2:
-        Configure_Screen_3();
-        break;
-      case 3:
-        Configure_Screen_4();
-        break;
-      default:
-        Configure_Screen_1();
+  // de-bounce button
+  if ((millis() - bounceTime) > debounceTime) {
+    // -- PRESSED --
+    if (HIGH == lastButtonState && LOW == buttonState) {
+      isButtonPressed = true;
+      Serial.println("The button is pressed");
+      if (isLcdOn && isManualMode) {
+        MoveCounterToNextScreen();
+      }
+    }  // -- RELEASED --
+    else if (LOW == lastButtonState && HIGH == buttonState) {
+      isButtonPressed = false;
+      isButtonLongPressed = false;
+      Serial.println("The button is released");
+    }
+    // -- LONG PRESS --
+    if (!isButtonLongPressed
+        && LOW == buttonState
+        && (millis() - longPressPrevTime) > longPressTime) {
+      isButtonLongPressed = true;
+      Serial.println("The button is LONG pressed");
+      SwitchMode();
     }
 
-    // write to lcd
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print(lcd_row_1);
-    lcd.setCursor(0, 1);
-    lcd.print(lcd_row_2);
+    lastButtonState = buttonState;
+  }
+  return isButtonPressed;
+}
+
+// Print 4 different 'screens' on LCD
+// switching screens after given amount or by button press in manual mode
+void PrintScreens() {
+  static unsigned long prev_millis;
+  static int lastScreenCounter;
+
+  // timeout for mode switch
+  if (showModeSwitch && millis() - modeSwitchStartTime > modeSwitchTimeout) {
+    showModeSwitch = false;
+    SwitchScreen(screenCounter);  // need when switched to MANUAL mode so it won't stuck
+  }
+
+  if (showModeSwitch) {
+    prev_millis = millis();  // mode switch screen should not be overwritten
+    return;
+  }
+
+  // switched screens via button in manual mode or via timeout in automatic mode
+  else if (isManualMode && screenCounter != lastScreenCounter) {
+    // screen increased by button press
+    SwitchScreen(screenCounter);
+  } else if (!isManualMode && (millis() - prev_millis) > timeBetweenScreens) {
+    MoveCounterToNextScreen();
+    prev_millis = millis();
+    SwitchScreen(screenCounter);
+  }
+  lastScreenCounter = screenCounter;
+}
+
+void SwitchScreen(int screen) {
+  switch (screen) {
+    case 0:
+      Serial.printf("Switched to screen: %d - Voltage, Ampere & State\n", screen);
+      ConfigureScreen1();
+      break;
+    case 1:
+      Serial.printf("Switched to screen: %d - VPV, IPV & PPV\n", screen);
+      ConfigureScreen2();
+      break;
+    case 2:
+      Serial.printf("Switched to screen: %d - PTODAY & PMAX\n", screen);
+      ConfigureScreen3();
+      break;
+    case 3:
+      Serial.printf("Switched to screen: %d - TOTAL POWER\n", screen);
+      ConfigureScreen4();
+      break;
+    default:
+      Serial.printf("Switched to screen: %d - Voltage, Ampere & State\n", screen);
+      ConfigureScreen1();
+  }
+
+  // write to lcd
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(lcd_row_1);
+  lcd.setCursor(0, 1);
+  lcd.print(lcd_row_2);
+}
+
+void SetLcdBg(bool on) {
+  if (on) {
+    lcd.backlight();
+  } else {
+    lcd.noBacklight();
+  }
+  isLcdOn = on;
+}
+
+void CheckLcdTimeout() {
+  static unsigned long prev_millis;
+
+  if (isButtonPressed) {
+    prev_millis = millis();
+    if (!isLcdOn) {
+      SetLcdBg(true);
+    }
+  }
+
+  if (isLcdOn && (millis() - prev_millis) > lcdTimeout) {
+    prev_millis = millis();
+    Serial.println("LCD Timeout");
+    SetLcdBg(false);
   }
 }
 
+void MoveCounterToNextScreen() {
+  screenCounter = (screenCounter + 1) % screens;
+}
+
+void SwitchMode() {
+  isManualMode = !isManualMode;
+  showModeSwitch = true;
+  modeSwitchStartTime = millis();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Switched Mode:");
+  lcd.setCursor(0, 1);
+  lcd.print(isManualMode ? "M A N U A L" : "AUTOMATIC");
+  Serial.printf("Switched mode: %s\n", isManualMode ? "Manual" : "Automatic");
+}
+
 // -- Voltage, Ampere & State --
-void Configure_Screen_1() {
+void ConfigureScreen1() {
+  // VBAT 12.8V STATE
+  // IVAT 16.5A FLOAT
+
   // get values & convert
   const float volt = GetFloatValue(V, 0.001);    // mV to V
   const float ampere = GetFloatValue(I, 0.001);  // mA to A
-  const char *state = GetStateOfOperation(CS);
+  const char *state = GetStateOfOperation();
 
   // format output string for lcd
   snprintf(lcd_row_1, maxChars, "VBAT %4.1fV STATE", volt);
@@ -317,11 +438,14 @@ void Configure_Screen_1() {
 }
 
 // -- VPV, IPV & PPV --
-void Configure_Screen_2() {
+void ConfigureScreen2() {
+  // VPV  29V IPV 17A
+  // PPV  72W
+
   // get values & convert
   float _VPV = GetFloatValue(VPV, 0.001);  // mV to V
   float _PPV = GetFloatValue(PPV);         // W
-  float _IPV = _PPV / 12.5 /* V */;
+  float _IPV = _PPV / 12.5;                // W / I
 
   // format output string for lcd
   snprintf(lcd_row_1, maxChars, "VPV %3.0fV IPV %2.0fA", _VPV, _IPV);
@@ -329,7 +453,10 @@ void Configure_Screen_2() {
 }
 
 // -- PTODAY & PMAX --
-void Configure_Screen_3() {
+void ConfigureScreen3() {
+  // PTODAY 100W
+  // PMAX   80W
+
   int _PTODAY = GetIntValue(H20, 10);  // in 0,01kWh -> W
   int _PMAX = GetIntValue(H21);        // W
 
@@ -339,7 +466,10 @@ void Configure_Screen_3() {
 }
 
 // -- TOTAL POWER --
-void Configure_Screen_4() {
+void ConfigureScreen4() {
+  // TOTAL POWER
+  //    10000.00KWh
+
   int _TOTAL_POWER = GetIntValue(H20, 10);  // in 0,01kWh -> W
 
   // format output string for lcd
