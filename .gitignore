@@ -1,0 +1,31 @@
+# Arduino IDE build files
+/build/
+/*.hex
+/*.elf
+/*.eep
+/*.bin
+
+# Compiled object files
+*.o
+*.d
+
+# Arduino IDE specific files
+*.cpp.macosx
+*.h.macosx
+
+# IDE configuration files
+*.user
+*.workspace
+
+# Temporary files created by IDEs
+.idea/
+.vscode/
+
+# System-specific files
+.DS_Store           # macOS
+Thumbs.db           # Windows
+desktop.ini         # Windows
+
+# OS generated files
+ehthumbs.db         # Windows
+Icon?
