@@ -42,7 +42,7 @@ bool isManualMode = false;  // If switch of screens is manual via button press
 const int buttonPin = D4;          // GPIO 2
 const int debounceTime = 50;       // 50ms debounce time
 const int longPressTime = 2000;    // Time until 'long press' will be detected
-int buttonState = LOW;             // The current reading from the input pin
+int buttonState = HIGH;            // The current reading from the input pin
 bool isButtonPressed = false;      // Whether button is pressed or not
 bool isButtonLongPressed = false;  // Whether button is long pressed;
 
@@ -51,16 +51,17 @@ bool isButtonLongPressed = false;  // Whether button is long pressed;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 
 // -- Victron Energy MPPT --
-SoftwareSerial victronSerial(rxPin, txPin);          // RX, TX Using Software Serial so we can use the hardware serial to check the ouput
-                                                     // via the USB serial provided by the NodeMCU.
-char receivedChars[buffsize];                        // an array to store the received data
-char tempChars[buffsize];                            // an array to manipulate the received data
-char recv_label[num_keywords][label_bytes] = { 0 };  // {0} tells the compiler to initalize it with 0.
-char recv_value[num_keywords][value_bytes] = { 0 };  // That does not mean it is filled with 0's
-char value[num_keywords][value_bytes] = { 0 };       // The array that holds the verified data
+SoftwareSerial victronSerial(rxPin, txPin);             // RX, TX Using Software Serial so we can use the hardware serial to check the ouput
+                                                        // via the USB serial provided by the NodeMCU.
+char receivedChars[buffsize];                           // an array to store the received data
+char tempChars[buffsize];                               // an array to manipulate the received data
+char recv_label[num_keywords][label_bytes] = { 0 };     // {0} tells the compiler to initalize it with 0.
+char recv_value[num_keywords][value_bytes] = { 0 };     // That does not mean it is filled with 0's
+char victronValues[num_keywords][value_bytes] = { 0 };  // The array that holds the verified data
 static byte blockindex = 0;
 bool new_data = false;
 bool blockend = false;
+
 
 void setup() {
   // Open serial communications and wait for port to open:
@@ -185,7 +186,7 @@ void ParseData() {
         for (int j = start; (j - start) < num_keywords; j++) {
           if (strcmp(recv_label[i], keywords[j % num_keywords]) == 0) {
             // found the label, copy it to the value array
-            strcpy(value[j], recv_value[i]);
+            strcpy(victronValues[j], recv_value[i]);
             start = (j + 1) % num_keywords;  // start searching the next one at this hit +1
             break;
           }
@@ -210,17 +211,17 @@ void PrintValues() {
   for (int i = 0; i < num_keywords; i++) {
     Serial.print(keywords[i]);
     Serial.print(",");
-    Serial.println(value[i]);
+    Serial.println(victronValues[i]);
   }
 }
 
 float GetFloatValue(int index, float mult = 1.0) {
-  float val = atof(value[index]) * mult;
+  float val = atof(victronValues[index]) * mult;
   return val;
 }
 
 int GetIntValue(int index, int mult = 1) {
-  int val = atoi(value[index]) * mult;
+  int val = atoi(victronValues[index]) * mult;
   return val;
 }
 
@@ -419,6 +420,7 @@ void ConfigureScreen1() {
   const float ampere = GetFloatValue(I, 0.001);  // mA to A
   const char *state = GetStateOfOperation();
 
+
   // format output string for lcd
   snprintf(lcd_row_1, maxChars, "VBAT %4.1fV STATE", volt);
   snprintf(lcd_row_2, maxChars, "IBAT %4.1fA %s", ampere, state);
@@ -430,26 +432,26 @@ void ConfigureScreen2() {
   // PPV  72W
 
   // get values & convert
-  float _VPV = GetFloatValue(VPV, 0.001);  // mV to V
-  float _PPV = GetFloatValue(PPV);         // W
-  float _IPV = _PPV / 12.5;                // W / I
+  float voltPV = GetFloatValue(VPV, 0.001);  // mV to V
+  float powerPV = GetFloatValue(PPV);        // W
+  float amperePV = powerPV / voltPV;         // W / I
 
   // format output string for lcd
-  snprintf(lcd_row_1, maxChars, "VPV %3.0fV IPV %2.0fA", _VPV, _IPV);
-  snprintf(lcd_row_2, maxChars, "PPV %3.0fW ", _PPV);
+  snprintf(lcd_row_1, maxChars, "VPV %3.0fV IPV %2.0fA", voltPV, amperePV);
+  snprintf(lcd_row_2, maxChars, "PPV %3.0fW ", powerPV);
 }
 
 // -- PTODAY & PMAX --
 void ConfigureScreen3() {
-  // PTODAY 100W
+  // PTODAY 100WH20
   // PMAX   80W
 
-  int _PTODAY = GetIntValue(H20, 10);  // in 0,01kWh -> W
-  int _PMAX = GetIntValue(H21);        // W
+  int powerToday = GetIntValue(H20, 10);  // in 0,01kWh -> Wh
+  int powerMax = GetIntValue(H21);        // W
 
   // format output string for lcd
-  snprintf(lcd_row_1, maxChars, "PTODAY %3dW", _PTODAY);
-  snprintf(lcd_row_2, maxChars, "PMAX   %3dW ", _PMAX);
+  snprintf(lcd_row_1, maxChars, "PTODAY %3dW", powerToday);
+  snprintf(lcd_row_2, maxChars, "PMAX   %3dW ", powerMax);
 }
 
 // -- TOTAL POWER --
@@ -457,9 +459,9 @@ void ConfigureScreen4() {
   // TOTAL POWER
   //    10000.00KWh
 
-  int _TOTAL_POWER = GetIntValue(H20, 10);  // in 0,01kWh -> W
+  float powerTotal = GetFloatValue(H19, 0.01);  // in 0,01kWh -> kWh
 
   // format output string for lcd
   snprintf(lcd_row_1, maxChars, "TOTAL POWER");
-  snprintf(lcd_row_2, maxChars, "%13dKWh ", _TOTAL_POWER);
+  snprintf(lcd_row_2, maxChars, "%13.2fKWh ", powerTotal);
 }
