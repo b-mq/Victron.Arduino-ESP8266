@@ -7,7 +7,6 @@
     Tested on NodeMCU v1.0
 
     The fields of the serial commands are configured in "config.h"
-
 */
 
 #include "config.h"
@@ -62,18 +61,6 @@ char value[num_keywords][value_bytes] = { 0 };       // The array that holds the
 static byte blockindex = 0;
 bool new_data = false;
 bool blockend = false;
-
-// set value keys to print on LCD
-int keys_lcd[] = {
-  V,    // Unit:       mV | Desc: Main or channel 1 (battery) voltage
-  I,    // Unit:       mA | Desc: Main or channel 1 battery current
-  CS,   // Unit:        ? | Desc: State of operation
-  VPV,  // Unit:       mV | Desc: Panel voltage
-  PPV,  // Unit:        W | Desc: Panel power
-  H19,  // Unit: 0.01 kWh | Desc: Yield total (user resettable counter)
-  H20,  // Unit: 0.01 kWh | Desc: Yield today
-  H21,  // Unit: 0.01 kWh | Desc: Yield yesterday
-};
 
 void setup() {
   // Open serial communications and wait for port to open:
