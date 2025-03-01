@@ -4,7 +4,7 @@ Code to read the VE.Direct-Protocol from serial into a value array. Uses a non-b
 ## Display LCD-1602
 This code was extended by I2C Interface for LCD-1602 display. This display has 2 rows with 16 ASCII characters each row.
 
-###Automatic mode 
+### Automatic mode 
 
 To show the most important VE data with this display:  
 “V"= Battery Voltage
@@ -17,7 +17,7 @@ To show the most important VE data with this display:
 “H21"= Maximum Power today
 the display is divided into 4 screens, each of which is displayed for 4 seconds. 
 
-###Function of the pushbutton 
+### Function of the pushbutton 
 
 1) Short push-button action
 The background lighting is switched on by briefly pressing the pushbutton. In automatic mode, the backlighting is switched off again after 2 complete cycles of the 4 screens, after 30 sec.
