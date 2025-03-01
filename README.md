@@ -23,7 +23,10 @@ the display is divided into 4 screens, each of which is displayed for 4 seconds.
 The background lighting is switched on by briefly pressing the pushbutton. In automatic mode, the backlighting is switched off again after 2 complete cycles of the 4 screens, after 30 sec.
 
 2) Long push-button action
-A long press on the push-button switches between manual and automatic mode. In manual mode, you can switch through the 4 screens with a short press of the button.
+A long press on the push-button switches between manual and automatic mode.
+
+### Manual mode
+In manual mode, you can switch through the 4 screens with a short press of the button.
 
 ## Config
 At the moment the MPPT 75/10 and the 100/20 are configured in the `config.h`.
