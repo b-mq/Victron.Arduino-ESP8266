@@ -6,15 +6,18 @@ This code was extended by I2C Interface for LCD-1602 display. This display has 2
 
 ### Automatic mode 
 To show the most important VE data with this display:  
-“V"= Battery Voltage;  
-“I"= Battery Current;  
-“VPV"= Panel Voltage;  
-“PPV"= Panel Power;  
-“CS"= State of Operation;  
-“H19"= Yield total (user resettable counter):  
-“H20"= Yield today 0.01kWh;  
-“H21"= Maximum Power today;  
-the display is divided into 4 screens, each of which is displayed for 4 seconds. 
+| Victron Energy Key | Description |
+| ------------- | ------------- |  
+| **V**   | Battery Voltage |
+| **I**   | Battery Current |
+| **VPV** | Panel Voltage |
+| **PPV** | Panel Power |
+| **CS**  | State of Operation |
+| **H19** | Yield total (user resettab counter): |
+| **H20** | Yield today 0.01kWh |
+| **H21** | Maximum Power today |
+
+The display is divided into 4 screens, each of which is displayed for 4 seconds. 
 
 ### Function of the pushbutton 
 
