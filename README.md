@@ -40,12 +40,23 @@ In manual mode, you can switch through the 4 screens with a short press of the b
 |V|B|A|T| |2|0|V| | |S|T|A|T|E| |
 |I|B|A|T| |2|6|A| | |F|L|O|A|T| |  
 
-CS=0 -> OFF  
-CS=3 -> BULK  
-CS=4 -> ABSORPTION  
-CS=5 -> FLOAT  
-CS=7 -> EQUALIZE (manual)  
 
+| CS | MODE OF OPERATION |
+| ---- | ---- |  
+| 0 | Off |
+| 1 | Low power |
+| 2 | Fault |
+| 3 | Bulk |
+| 4 | Absorption |
+| 5 | Float |
+| 6 | Storage |
+| 7 | Equalize (manual) |
+| 9 | Inverting |
+| 11 | Power supply |
+| 245 | Starting-up |
+| 246 | Repeated absorption |
+| 247 | Auto equalize / Recondition |
+| 248 | BatterySafe |
 
 **Screen 2**
 |1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|
