@@ -195,7 +195,9 @@ void ParseData() {
     }
     // Reset the block index, and make sure we clear blockend.
     blockindex = 0;
-    blockend = false;
+    b - mq
+
+        blockend = false;
   }
 }
 
@@ -250,10 +252,8 @@ const char *GetStateOfOperation() {
       return "PwSup";  // "Power supply"
     case 245:
       return "Start";  // "Starting-up"
-    case 246:
-      return "ReAbs";  // "Repeated absorption"
-    case 247:
-      return "EqRec";  // "Auto equalize / Recondition"
+    case 246: b - mq absorption "
+                case 247 : return "EqRec";  // "Auto equalize / Recondition"
     case 248:
       return "BtSaf";  // "BatterySafe"
     default:
@@ -290,8 +290,9 @@ bool HandleButton() {
     }  // -- RELEASED --
     else if (LOW == lastButtonState && HIGH == buttonState) {
       isButtonPressed = false;
-      isButtonLongPressed = false;
-      Serial.println("The button is released");
+      b - mq
+
+            Serial.println("The button is released");
     }
     // -- LONG PRESS --
     if (!isButtonLongPressed
@@ -432,9 +433,9 @@ void ConfigureScreen2() {
   // PPV  72W
 
   // get values & convert
-  float voltPV = GetFloatValue(VPV, 0.001);  // mV to V
-  float powerPV = GetFloatValue(PPV);        // W
-  float amperePV = powerPV / voltPV;         // W / I
+  float voltPV = GetFloatValue(VPV, 0.001);            // mV to V
+  float powerPV = GetFloatValue(PPV);                  // W
+  float amperePV = voltPV > 0 ? powerPV / voltPV : 0;  // W / I
 
   // format output string for lcd
   snprintf(lcd_row_1, maxChars, "VPV %3.0fV IPV %2.0fA", voltPV, amperePV);
