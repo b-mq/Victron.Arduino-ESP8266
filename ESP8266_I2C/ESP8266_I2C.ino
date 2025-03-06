@@ -195,9 +195,7 @@ void ParseData() {
     }
     // Reset the block index, and make sure we clear blockend.
     blockindex = 0;
-    b - mq
-
-        blockend = false;
+    blockend = false;
   }
 }
 
@@ -252,8 +250,10 @@ const char *GetStateOfOperation() {
       return "PwSup";  // "Power supply"
     case 245:
       return "Start";  // "Starting-up"
-    case 246: b - mq absorption "
-                case 247 : return "EqRec";  // "Auto equalize / Recondition"
+    case 246:
+      return "ReAbs";  // "Repeated absorption"
+    case 247:
+      return "EqRec";  // "Auto equalize / Recondition"
     case 248:
       return "BtSaf";  // "BatterySafe"
     default:
@@ -290,9 +290,8 @@ bool HandleButton() {
     }  // -- RELEASED --
     else if (LOW == lastButtonState && HIGH == buttonState) {
       isButtonPressed = false;
-      b - mq
-
-            Serial.println("The button is released");
+      isButtonLongPressed = false;
+      Serial.println("The button is released");
     }
     // -- LONG PRESS --
     if (!isButtonLongPressed
@@ -420,7 +419,6 @@ void ConfigureScreen1() {
   const float volt = GetFloatValue(V, 0.001);    // mV to V
   const float ampere = GetFloatValue(I, 0.001);  // mA to A
   const char *state = GetStateOfOperation();
-
 
   // format output string for lcd
   snprintf(lcd_row_1, maxChars, "VBAT %4.1fV STATE", volt);

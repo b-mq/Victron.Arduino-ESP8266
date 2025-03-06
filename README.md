@@ -13,7 +13,7 @@ To show the most important VE data with this display:
 | **VPV** | Panel Voltage |
 | **PPV** | Panel Power |
 | **CS**  | State of Operation |
-| **H19** | Yield total (user resettab counter): |
+| **H19** | Yield total (user resettab counter) |
 | **H20** | Yield today 0.01kWh |
 | **H21** | Maximum Power today |
 
@@ -30,8 +30,56 @@ A long press on the push-button switches between manual and automatic mode.
 ### Manual mode
 In manual mode, you can switch through the 4 screens with a short press of the button.
 
+## Content of the 4 screens
+
+**LCD Display 16x2**
+
+**Screen 1**
+|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+|V|B|A|T| |2|0|V| | |S|T|A|T|E| |
+|I|B|A|T| |2|6|A| | |F|L|O|A|T| |  
+
+CS=0 -> OFF  
+CS=3 -> BULK  
+CS=4 -> ABSORPTION  
+CS=5 -> FLOAT  
+CS=7 -> EQUALIZE (manual)  
+
+
+**Screen 2**
+|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+|V|P|V| | |2|9|V| |I|P|V| |1|1|A|
+|P|P|V| | |7|2|W| | | | | | | | |
+IPV=PPV/VPV  
+
+**Screen 3**
+|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+|P|T|O|D|A|Y| |2|8|0|W| | | | | |
+|P|M|A|X| | | | |8|0|W| | | | | |  
+
+PTODAY=H20  
+Pmax=H21
+
+**Screen 4**
+|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+|T|O|T|A|L| |P|O|W|E|R| | | | | |
+| | | | | | | | |1|2|.|0|0|k|W|h|  
+
+TOTAL POWER = H19  
+
+
 ## Config
 At the moment the MPPT 75/10 and the 100/20 are configured in the `config.h`.
+
+## Circuit diagram
+
+![alt text](VE-MPPT-Schaltplan-Datenschnittstelle_02_2025.jpg)
+
+
 
 ## Usage
 Make sure the RX and TX of the VE.Direct-Protocol are connected to the corresponding pins in the setup, `victronSerial`. On the NodeMCU, pins D7/D8 are used.
