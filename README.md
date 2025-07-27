@@ -13,7 +13,7 @@ To show the most important VE data with this display:
 | **VPV** | Panel Voltage |
 | **PPV** | Panel Power |
 | **CS**  | State of Operation |
-| **H19** | Yield total (user resettab counter) |
+| **H19** | Yield total (user reset tab counter) |
 | **H20** | Yield today 0.01kWh |
 | **H21** | Maximum Power today |
 
@@ -89,7 +89,10 @@ At the moment the MPPT 75/10 and the 100/20 are configured in the `config.h`.
 
 ## Circuit diagram
 
-![alt text](VE-MPPT-Schaltplan-Datenschnittstelle_02_2025.jpg)
+**Power Supply**  
+The Victron Energy MPPT 100/20 does not supply enough power at its 5V output. This is only a TTL-Level output to control a Dimmer for a light. Therefore an additional power supply is necessary. You can use the 5V micro USB port to provide the 5V to ESP8266MOD or my circuit with 7805 Fixed Voltage Regulator powered by the 12V of the battery.  
+
+![alt text](img/VE-MPPT-Schaltplan-Datenschnittstelle_07_2025_n.jpg)
 
 
 
